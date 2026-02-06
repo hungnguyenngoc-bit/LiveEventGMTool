@@ -1,0 +1,36 @@
+{
+  "entries": [
+    {
+      "eventName": "LE1",
+      "calendarId": "1",
+      "startDateTime": "2026-02-04T15:00:00+07:00",
+      "endDateTime": "2026-02-04T15:05:00+07:00",
+      "minDurationHours": 0,
+      "urlConfig": "https://drive.google.com/uc?export=download&id=1nckOVtP7eUo8K1zglJU55EH8Aqugb1bE"
+    },
+    {
+      "eventName": "LE1",
+      "calendarId": "2",
+      "startDateTime": "2026-02-04T15:10:00+07:00",
+      "endDateTime": "2026-02-04T15:15:00+07:00",
+      "minDurationHours": 0,
+      "urlConfig": "https://drive.google.com/uc?export=download&id=18LfNOEg8IBkd-tKUf09hnVS_qtMuWIzK"
+    },
+    {
+      "eventName": "LE2",
+      "calendarId": "3",
+      "startDateTime": "2026-02-04T16:00:00+07:00",
+      "endDateTime": "2026-02-04T16:05:00+07:00",
+      "minDurationHours": 0,
+      "urlConfig": "https://drive.google.com/uc?export=download&id=1-gisr2V3OrS0s5aejaiw5QHOMJgli7Hh"
+    },
+    {
+      "eventName": "LE2",
+      "calendarId": "4",
+      "startDateTime": "2026-02-04T16:06:00+07:00",
+      "endDateTime": "2026-02-04T16:10:00+07:00",
+      "minDurationHours": 0,
+      "urlConfig": "https://drive.google.com/uc?export=download&id=1grnSUFeh9ZOYJwE-zDiZYbWVKZKN-oJ9"
+    }
+  ]
+}
