@@ -355,7 +355,7 @@ body.no-select {
 .timeline-scroll {
   flex: 1;
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: auto;
   position: relative;
   cursor: grab;
 }
@@ -406,6 +406,16 @@ body.no-select {
   font-weight: 600;
   white-space: nowrap;
   box-shadow: 0 6px 16px rgba(18, 28, 45, 0.15);
+}
+
+.marquee-select {
+  position: absolute;
+  border: 1px dashed #0b5ed7;
+  background: rgba(11, 94, 215, 0.12);
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 5;
+  display: none;
 }
 
 .ruler {
@@ -520,13 +530,18 @@ body.no-select {
   border-radius: 10px;
   color: var(--ink);
   background: #dde7f3;
-  padding: 10px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  padding: 0;
+  display: block;
   cursor: grab;
   overflow: hidden;
   container-type: inline-size;
+}
+
+.season-content {
+  margin: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .season.past {

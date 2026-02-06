@@ -27,10 +27,10 @@ const TIMEZONE_KEY = "gm_timeline_timezone_v1";
 const MS_PER_HOUR = 3600000;
 const MS_PER_MINUTE = 60000;
 const SNAP_MINUTES = 1;
-const MIN_ZOOM = 8;
-const MAX_ZOOM = 320;
+const MIN_ZOOM = 0.016;
+const BASE_ZOOM = 16;
+const MAX_ZOOM = BASE_ZOOM * 10;
 const HOURS_HIDE_ZOOM = 56;
-const BASE_ZOOM = 80;
 const MAX_SURFACE_WIDTH = 2000000;
 const DEFAULT_PADDING_HOURS = 8;
 const TRACK_COLORS = [
@@ -72,6 +72,13 @@ const drag = {
   endMs: 0,
   mode: null,
   element: null,
+  trackName: null,
+  prevEndMs: null,
+  nextStartMs: null,
+  rafId: null,
+  lastClientX: 0,
+  selectedIds: [],
+  baseTimes: null,
 };
 
 let isSyncingScroll = false;
@@ -82,8 +89,16 @@ let panStartY = 0;
 let panScrollLeft = 0;
 let panScrollTop = 0;
 let selectedEntryId = null;
+const selectedEntryIds = new Set();
 const trackColorCache = new Map();
 let nowOffsetMs = 0;
+
+const marquee = {
+  active: false,
+  startClientX: 0,
+  startClientY: 0,
+  element: null,
+};
 
 function saveState() {
   const payload = {
@@ -122,6 +137,7 @@ function applySnapshot(snapshot) {
   state.trackOrder = uniqueTracks(state.entries);
   state.hiddenTracks = [];
   selectedEntryId = null;
+  selectedEntryIds.clear();
   saveState();
   renderAll();
 }
@@ -130,6 +146,46 @@ function uniqueTracks(entries) {
   const set = new Set();
   entries.forEach((entry) => set.add(entry.eventName));
   return Array.from(set);
+}
+
+function getTrackEntries(trackName, excludeId) {
+  const excludeSet = excludeId instanceof Set ? excludeId : excludeId ? new Set([excludeId]) : null;
+  return state.entries
+    .filter((entry) => entry.eventName === trackName && !(excludeSet && excludeSet.has(entry.calendarId)))
+    .map((entry) => {
+      const start = parseISO(entry.startDateTime);
+      const end = parseISO(entry.endDateTime);
+      if (!start || !end) return null;
+      return {
+        id: entry.calendarId,
+        startMs: start.getTime(),
+        endMs: end.getTime(),
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.startMs - b.startMs);
+}
+
+function hasTrackOverlap(trackName, startMs, endMs, excludeId) {
+  const others = getTrackEntries(trackName, excludeId);
+  return others.some((other) => startMs < other.endMs && endMs > other.startMs);
+}
+
+function getTrackNeighbors(trackName, entryId, startMs, excludeIds) {
+  const excludeSet = excludeIds instanceof Set ? excludeIds : entryId ? new Set([entryId]) : null;
+  const others = getTrackEntries(trackName, excludeSet);
+  let prevEnd = -Infinity;
+  let nextStart = Infinity;
+  for (const other of others) {
+    if (other.startMs <= startMs) {
+      if (other.endMs > prevEnd) prevEnd = other.endMs;
+      continue;
+    }
+    if (other.startMs > startMs && other.startMs < nextStart) {
+      nextStart = other.startMs;
+    }
+  }
+  return { prevEndMs: prevEnd, nextStartMs: nextStart };
 }
 
 function parseISO(value) {
@@ -223,11 +279,26 @@ function formatDateStamp(date) {
 
 function formatDuration(start, end) {
   const minutes = Math.max(0, Math.round((end - start) / 60000));
-  const hrs = Math.floor(minutes / 60);
   const mins = minutes % 60;
-  if (hrs > 0 && mins > 0) return `${hrs}h ${mins}m`;
-  if (hrs > 0) return `${hrs}h`;
-  return `${mins}m`;
+  const hoursTotal = Math.floor(minutes / 60);
+  const daysTotal = Math.floor(hoursTotal / 24);
+  const months = Math.floor(daysTotal / 30);
+  const days = daysTotal % 30;
+  const hours = hoursTotal % 24;
+
+  if (months > 0) {
+    if (days > 0) return `${months}mo ${days}d`;
+    return `${months}mo`;
+  }
+  if (daysTotal > 0) {
+    if (hours > 0) return `${daysTotal}d ${hours}h`;
+    return `${daysTotal}d`;
+  }
+  if (hoursTotal > 0) {
+    if (mins > 0) return `${hoursTotal}h ${mins}m`;
+    return `${hoursTotal}h`;
+  }
+  return `${minutes}m`;
 }
 
 function getNowMs() {
@@ -297,10 +368,60 @@ function applyViewX() {
   updateRulerSticky();
 }
 
-function setSelectedEntry(entryId) {
+function applySelectionClass(entryId) {
+  document.querySelectorAll(".season.selected").forEach((season) => season.classList.remove("selected"));
+  if (entryId) {
+    selectedEntryIds.clear();
+    selectedEntryIds.add(entryId);
+  }
+  selectedEntryIds.forEach((id) => {
+    const target = lanes.querySelector(`.season[data-id="${CSS.escape(id)}"]`);
+    if (target) target.classList.add("selected");
+  });
+}
+
+function setSelectedEntry(entryId, shouldRender = true) {
   if (selectedEntryId === entryId) return;
   selectedEntryId = entryId;
-  renderLanes();
+  if (shouldRender) {
+    renderLanes();
+    return;
+  }
+  applySelectionClass(entryId);
+}
+
+function setSelection(ids, shouldRender = false) {
+  selectedEntryIds.clear();
+  ids.forEach((id) => {
+    if (id) selectedEntryIds.add(id);
+  });
+  selectedEntryId = ids.length === 1 ? ids[0] : null;
+  if (shouldRender) {
+    renderLanes();
+    return;
+  }
+  applySelectionClass(null);
+}
+
+function toggleSelection(id) {
+  if (!id) return;
+  if (selectedEntryIds.has(id)) {
+    selectedEntryIds.delete(id);
+  } else {
+    selectedEntryIds.add(id);
+  }
+  selectedEntryId = selectedEntryIds.size === 1 ? Array.from(selectedEntryIds)[0] : null;
+  applySelectionClass(null);
+}
+
+function clearSelection(shouldRender = false) {
+  selectedEntryIds.clear();
+  selectedEntryId = null;
+  if (shouldRender) {
+    renderLanes();
+    return;
+  }
+  applySelectionClass(null);
 }
 
 function isEditableTarget(target) {
@@ -314,17 +435,25 @@ function getNextCalendarId() {
 }
 
 function deleteSelectedSeason() {
-  if (!selectedEntryId) return;
-  const index = state.entries.findIndex((entry) => entry.calendarId === selectedEntryId);
-  if (index === -1) return;
-  const removed = state.entries[index];
-  state.entries.splice(index, 1);
+  const idsToDelete = selectedEntryIds.size ? Array.from(selectedEntryIds) : selectedEntryId ? [selectedEntryId] : [];
+  if (!idsToDelete.length) return;
+  const removedTracks = new Set();
+  idsToDelete.forEach((id) => {
+    const index = state.entries.findIndex((entry) => entry.calendarId === id);
+    if (index === -1) return;
+    const removed = state.entries[index];
+    removedTracks.add(removed.eventName);
+    state.entries.splice(index, 1);
+  });
   selectedEntryId = null;
-  const stillHasTrack = state.entries.some((entry) => entry.eventName === removed.eventName);
-  if (!stillHasTrack) {
-    state.trackOrder = state.trackOrder.filter((name) => name !== removed.eventName);
-    state.hiddenTracks = state.hiddenTracks.filter((name) => name !== removed.eventName);
-  }
+  selectedEntryIds.clear();
+  removedTracks.forEach((track) => {
+    const stillHasTrack = state.entries.some((entry) => entry.eventName === track);
+    if (!stillHasTrack) {
+      state.trackOrder = state.trackOrder.filter((name) => name !== track);
+      state.hiddenTracks = state.hiddenTracks.filter((name) => name !== track);
+    }
+  });
   saveState();
   pushHistory();
   renderAll();
@@ -364,6 +493,18 @@ function deleteTrack(trackName) {
   state.hiddenTracks = state.hiddenTracks.filter((name) => name !== trackName);
   if (selectedEntryId && !state.entries.some((entry) => entry.calendarId === selectedEntryId)) {
     selectedEntryId = null;
+  }
+  if (selectedEntryIds.size) {
+    let removed = false;
+    Array.from(selectedEntryIds).forEach((id) => {
+      if (!state.entries.some((entry) => entry.calendarId === id)) {
+        selectedEntryIds.delete(id);
+        removed = true;
+      }
+    });
+    if (removed && selectedEntryIds.size === 0) {
+      selectedEntryId = null;
+    }
   }
   saveState();
   pushHistory();
@@ -480,7 +621,7 @@ function renderLanes() {
         const end = parseISO(entry.endDateTime);
         if (!start || !end) return;
         const left = timeToX(start.getTime());
-        const width = Math.max(20, timeToX(end.getTime()) - left);
+        const width = Math.max(10, timeToX(end.getTime()) - left);
         const trackColor = getTrackColor(trackName);
 
         const season = document.createElement("div");
@@ -497,12 +638,18 @@ function renderLanes() {
         if (selectedEntryId === entry.calendarId) {
           season.classList.add("selected");
         }
+        if (selectedEntryIds.has(entry.calendarId)) {
+          season.classList.add("selected");
+        }
         season.style.left = `${left}px`;
         season.style.width = `${width}px`;
         season.dataset.id = entry.calendarId;
         season.style.setProperty("--track-color", trackColor);
         season.dataset.left = String(left);
         season.dataset.width = String(width);
+
+        const content = document.createElement("div");
+        content.className = "season-content";
 
         const title = document.createElement("div");
         title.className = "season-title";
@@ -515,6 +662,8 @@ function renderLanes() {
         const duration = document.createElement("div");
         duration.className = "season-duration";
         duration.textContent = formatDuration(start, end);
+
+        content.append(title, time);
 
         const floatLabel = document.createElement("div");
         floatLabel.className = "season-float";
@@ -545,7 +694,7 @@ function renderLanes() {
         handleRight.dataset.side = "end";
         handleRight.dataset.id = entry.calendarId;
 
-        season.append(floatLabel, title, time, duration, handleLeft, handleRight);
+        season.append(floatLabel, content, duration, handleLeft, handleRight);
         lane.appendChild(season);
       });
 
@@ -585,7 +734,7 @@ function updateSeasonElement(entry, seasonEl) {
   const end = parseISO(entry.endDateTime);
   if (!start || !end) return;
   const left = timeToX(start.getTime());
-  const width = Math.max(20, timeToX(end.getTime()) - left);
+  const width = Math.max(10, timeToX(end.getTime()) - left);
   seasonEl.style.left = `${left}px`;
   seasonEl.style.width = `${width}px`;
   seasonEl.dataset.left = String(left);
@@ -619,13 +768,25 @@ function updateSeasonElement(entry, seasonEl) {
   }
 }
 
+function updateAllSeasonsLayout() {
+  state.entries.forEach((entry) => {
+    const seasonEl = lanes.querySelector(`.season[data-id="${CSS.escape(entry.calendarId)}"]`);
+    if (!seasonEl) return;
+    updateSeasonElement(entry, seasonEl);
+  });
+}
+
+function pickStep(pxPerUnit, minSpacing, steps) {
+  return steps.find((step) => step * pxPerUnit >= minSpacing) || steps[steps.length - 1];
+}
+
 function renderRuler() {
   rulerDays.innerHTML = "";
   rulerHours.innerHTML = "";
   timelineSurface.querySelectorAll(".day-divider").forEach((divider) => divider.remove());
   const zoomPercent = (state.zoom / BASE_ZOOM) * 100;
-  const showHours = zoomPercent >= 10;
-  rulerHours.classList.toggle("hidden", !showHours);
+  const showHours = zoomPercent >= 40;
+  const showDayDividers = zoomPercent >= 100;
 
   const startTime = state.originMs;
   const endTime = xToTime(state.surfaceWidth);
@@ -634,7 +795,36 @@ function renderRuler() {
   startDate.setMinutes(0, 0, 0);
   const endDate = new Date(endTime);
 
-  if (showHours) {
+  const pxPerHour = state.zoom;
+  const pxPerDay = pxPerHour * 24;
+  const minDayLabelSpacing = 90;
+  const minHourLabelSpacing = 70;
+
+  const useMonths = pxPerDay < minDayLabelSpacing * 0.75;
+  if (useMonths) {
+    const monthCursor = new Date(startDate);
+    monthCursor.setDate(1);
+    monthCursor.setHours(0, 0, 0, 0);
+
+    const monthSteps = [1, 2, 3, 4, 6, 12];
+    const stepMonths = pickStep(pxPerDay * 30, minDayLabelSpacing, monthSteps);
+
+    while (monthCursor <= endDate) {
+      if (monthCursor >= startDate) {
+        const x = timeToX(monthCursor.getTime());
+        const tick = document.createElement("div");
+        tick.className = "ruler-tick";
+        tick.style.left = `${x}px`;
+        tick.dataset.left = String(x);
+        tick.dataset.time = String(monthCursor.getTime());
+        tick.innerHTML = `<strong>${formatMonthLabel(monthCursor)}</strong>`;
+        rulerDays.appendChild(tick);
+      }
+      monthCursor.setMonth(monthCursor.getMonth() + stepMonths);
+    }
+  } else {
+    const daySteps = [1, 2, 3, 5, 7, 10, 14, 21, 28];
+    const stepDays = pickStep(pxPerDay, minDayLabelSpacing, daySteps);
     const dayCursor = new Date(startDate);
     dayCursor.setHours(0, 0, 0, 0);
 
@@ -644,86 +834,40 @@ function renderRuler() {
       tick.className = "ruler-tick";
       tick.style.left = `${x}px`;
       tick.dataset.left = String(x);
+      tick.dataset.time = String(dayCursor.getTime());
       tick.innerHTML = `<strong>${formatDayLabel(dayCursor)}</strong>`;
       rulerDays.appendChild(tick);
 
-      const divider = document.createElement("div");
-      divider.className = "day-divider";
-      divider.style.left = `${x}px`;
-      timelineSurface.appendChild(divider);
-      dayCursor.setDate(dayCursor.getDate() + 1);
-    }
-  } else {
-    const monthCursor = new Date(startDate);
-    monthCursor.setDate(1);
-    monthCursor.setHours(0, 0, 0, 0);
-
-    const nextMonth = new Date(monthCursor);
-    nextMonth.setMonth(nextMonth.getMonth() + 1);
-    if (nextMonth > endDate) {
-      const x = timeToX(startDate.getTime());
-      const tick = document.createElement("div");
-      tick.className = "ruler-tick";
-      tick.style.left = `${x}px`;
-      tick.innerHTML = `<strong>${formatMonthLabel(startDate)}</strong>`;
-      rulerDays.appendChild(tick);
-    } else {
-      while (monthCursor <= endDate) {
-        if (monthCursor >= startDate) {
-          const x = timeToX(monthCursor.getTime());
-      const tick = document.createElement("div");
-      tick.className = "ruler-tick";
-      tick.style.left = `${x}px`;
-      tick.dataset.left = String(x);
-      tick.innerHTML = `<strong>${formatMonthLabel(monthCursor)}</strong>`;
-      rulerDays.appendChild(tick);
-        }
-        monthCursor.setMonth(monthCursor.getMonth() + 1);
+      if (showDayDividers) {
+        const divider = document.createElement("div");
+        divider.className = "day-divider";
+        divider.style.left = `${x}px`;
+        divider.dataset.time = String(dayCursor.getTime());
+        timelineSurface.appendChild(divider);
       }
+      dayCursor.setDate(dayCursor.getDate() + stepDays);
     }
   }
 
   if (showHours) {
-    const pxPerHour = state.zoom;
-    const minLabelSpacing = 70;
-    const hourSteps = [1, 2, 3, 4, 6, 8, 12, 24];
-    const hourStep = hourSteps.find((step) => step * pxPerHour >= minLabelSpacing) || 24;
+    const hourSteps = [1, 2, 3, 4, 6, 8, 12, 24, 48, 72, 168];
+    const hourStep = pickStep(pxPerHour, minHourLabelSpacing, hourSteps);
 
     const hourCursor = new Date(startDate);
     const alignOffset = hourCursor.getHours() % hourStep;
     if (alignOffset !== 0) {
       hourCursor.setHours(hourCursor.getHours() - alignOffset);
     }
+    hourCursor.setMinutes(0, 0, 0);
     while (hourCursor <= endDate) {
       const x = timeToX(hourCursor.getTime());
       const tick = document.createElement("div");
       tick.className = "ruler-tick";
       tick.style.left = `${x}px`;
+      tick.dataset.time = String(hourCursor.getTime());
       tick.textContent = formatHourLabel(hourCursor);
       rulerHours.appendChild(tick);
       hourCursor.setHours(hourCursor.getHours() + hourStep);
-    }
-
-    let minorStepMinutes = 0;
-    if (hourStep <= 1) minorStepMinutes = 10;
-    else if (hourStep <= 2) minorStepMinutes = 20;
-    else if (hourStep <= 4) minorStepMinutes = 60;
-    else if (hourStep <= 6) minorStepMinutes = 120;
-
-    if (minorStepMinutes) {
-      const minorCursor = new Date(startDate);
-      const minuteOffset = minorCursor.getMinutes() % minorStepMinutes;
-      if (minuteOffset !== 0) {
-        minorCursor.setMinutes(minorCursor.getMinutes() - minuteOffset);
-      }
-      while (minorCursor <= endDate) {
-        const x = timeToX(minorCursor.getTime());
-        const tick = document.createElement("div");
-        tick.className = "ruler-tick minor";
-        tick.style.left = `${x}px`;
-        rulerHours.appendChild(tick);
-        minorCursor.setMinutes(minorCursor.getMinutes() + minorStepMinutes);
-      }
     }
   }
 
@@ -755,6 +899,80 @@ function renderAll() {
   syncHeights();
   const maxTop = Math.max(0, lanes.offsetHeight - timelineScroll.clientHeight);
   timelineScroll.scrollTop = Math.min(prevTop, maxTop);
+}
+
+function ensureMarquee() {
+  if (marquee.element) return;
+  marquee.element = document.createElement("div");
+  marquee.element.className = "marquee-select";
+  timelineSurface.appendChild(marquee.element);
+}
+
+function startMarqueeSelection(event) {
+  ensureMarquee();
+  marquee.active = true;
+  marquee.startClientX = event.clientX;
+  marquee.startClientY = event.clientY;
+  marquee.element.style.display = "block";
+  updateMarqueeRect(event.clientX, event.clientY);
+}
+
+function updateMarqueeRect(clientX, clientY) {
+  const rect = timelineScroll.getBoundingClientRect();
+  const startX = marquee.startClientX - rect.left + state.viewX;
+  const startY = marquee.startClientY - rect.top + timelineScroll.scrollTop;
+  const currentX = clientX - rect.left + state.viewX;
+  const currentY = clientY - rect.top + timelineScroll.scrollTop;
+  const left = Math.min(startX, currentX);
+  const top = Math.min(startY, currentY);
+  const width = Math.abs(currentX - startX);
+  const height = Math.abs(currentY - startY);
+  marquee.element.style.left = `${left}px`;
+  marquee.element.style.top = `${top}px`;
+  marquee.element.style.width = `${width}px`;
+  marquee.element.style.height = `${height}px`;
+}
+
+function finishMarqueeSelection(event) {
+  if (!marquee.active) return;
+  marquee.active = false;
+  if (marquee.element) {
+    marquee.element.style.display = "none";
+  }
+  const rect = timelineScroll.getBoundingClientRect();
+  const minX = Math.min(marquee.startClientX, event.clientX);
+  const maxX = Math.max(marquee.startClientX, event.clientX);
+  const minY = Math.min(marquee.startClientY, event.clientY);
+  const maxY = Math.max(marquee.startClientY, event.clientY);
+  const addToSelection = event.ctrlKey || event.metaKey;
+  const width = maxX - minX;
+  const height = maxY - minY;
+  if (width < 3 && height < 3) {
+    if (!addToSelection) {
+      clearSelection(false);
+    }
+    return;
+  }
+
+  const hits = [];
+  document.querySelectorAll(".season").forEach((season) => {
+    if (season.closest(".lane.hidden")) return;
+    const srect = season.getBoundingClientRect();
+    const overlaps =
+      srect.right >= minX &&
+      srect.left <= maxX &&
+      srect.bottom >= minY &&
+      srect.top <= maxY;
+    if (overlaps) hits.push(season.dataset.id);
+  });
+
+  if (addToSelection) {
+    hits.forEach((id) => selectedEntryIds.add(id));
+    selectedEntryId = selectedEntryIds.size === 1 ? Array.from(selectedEntryIds)[0] : null;
+    applySelectionClass(null);
+  } else {
+    setSelection(hits, false);
+  }
 }
 
 function focusOnStart() {
@@ -789,6 +1007,15 @@ function updateZoomIndicator() {
   }
 }
 
+function updateZoomLayout() {
+  recalcSurface();
+  updateAllSeasonsLayout();
+  renderRuler();
+  applyViewX();
+  updateZoomIndicator();
+  syncHeights();
+}
+
 function updateHoverLine(clientX, clientY) {
   if (!hoverLine || !hoverTime) return;
   const rect = timelineScroll.getBoundingClientRect();
@@ -819,11 +1046,9 @@ function bindSeasonSelection() {
   lanes.addEventListener("pointerdown", (event) => {
     const season = event.target.closest(".season");
     if (!season) {
-      setSelectedEntry(null);
       return;
     }
     if (season.closest(".lane.hidden")) return;
-    setSelectedEntry(season.dataset.id);
   });
 
   lanes.addEventListener("dblclick", (event) => {
@@ -885,16 +1110,17 @@ function onWheelTimeline(event) {
     const rect = timelineScroll.getBoundingClientRect();
     const offsetX = event.clientX - rect.left;
     const cursorTime = xToTime(state.viewX + offsetX);
-    const zoomStep = BASE_ZOOM * 0.1;
-    const nextZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, state.zoom + (event.deltaY > 0 ? -zoomStep : zoomStep)));
+    const zoomFactor = Math.exp(-event.deltaY * 0.0025);
+    const nextZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, state.zoom * zoomFactor));
     if (nextZoom !== state.zoom) {
       state.zoom = nextZoom;
       recalcSurface();
       state.viewX = clampViewX(timeToX(cursorTime) - offsetX);
-      renderLanes();
+      updateAllSeasonsLayout();
       renderRuler();
       applyViewX();
       updateZoomIndicator();
+      syncHeights();
       saveState();
     }
     return;
@@ -917,6 +1143,14 @@ function onWheelTimeline(event) {
 
 function bindPan() {
   timelineScroll.addEventListener("pointerdown", (event) => {
+    if (event.button === 2) {
+      if (event.target.closest(".season") || event.target.closest(".season-handle")) return;
+      event.preventDefault();
+      startMarqueeSelection(event);
+      timelineScroll.setPointerCapture(event.pointerId);
+      document.body.classList.add("no-select");
+      return;
+    }
     if (event.button !== 0) return;
     if (event.target.closest(".season") || event.target.closest(".season-handle")) return;
     isPanning = true;
@@ -930,6 +1164,7 @@ function bindPan() {
   });
 
   timelineScroll.addEventListener("pointermove", (event) => {
+    if (marquee.active) return;
     if (!isPanning) return;
     const dx = event.clientX - panStartX;
     const dy = event.clientY - panStartY;
@@ -939,41 +1174,71 @@ function bindPan() {
   });
 
   timelineScroll.addEventListener("pointerup", (event) => {
+    if (marquee.active) {
+      finishMarqueeSelection(event);
+      timelineScroll.releasePointerCapture(event.pointerId);
+      document.body.classList.remove("no-select");
+      return;
+    }
     if (!isPanning) return;
     isPanning = false;
     timelineScroll.releasePointerCapture(event.pointerId);
     timelineScroll.style.cursor = "default";
     document.body.classList.remove("no-select");
   });
+
+  timelineScroll.addEventListener("contextmenu", (event) => {
+    if (event.target.closest(".timeline-scroll")) {
+      event.preventDefault();
+    }
+  });
 }
 
 function bindResizeHandles() {
   lanes.addEventListener("pointerdown", (event) => {
+    if (event.button === 2) return;
     const season = event.target.closest(".season");
     const handle = event.target.closest(".season-handle");
     if (!handle && !season) return;
     if (event.target.closest(".lane.hidden")) return;
+    const isToggle = event.ctrlKey || event.metaKey;
     if (handle) {
-    event.preventDefault();
-    const entryId = handle.dataset.id;
-    const side = handle.dataset.side;
-    const entry = state.entries.find((item) => item.calendarId === entryId);
-    if (!entry) return;
-    const season = handle.closest(".season");
-    const start = parseISO(entry.startDateTime);
-    const end = parseISO(entry.endDateTime);
-    if (!start || !end) return;
+      event.preventDefault();
+      const entryId = handle.dataset.id;
+      const side = handle.dataset.side;
+      const entry = state.entries.find((item) => item.calendarId === entryId);
+      if (!entry) return;
+      const season = handle.closest(".season");
 
-    drag.active = true;
-    drag.entryId = entryId;
-    drag.side = side;
-    drag.mode = "resize";
-    drag.startX = event.clientX;
-    drag.startMs = start.getTime();
-    drag.endMs = end.getTime();
-    drag.element = season;
-    document.body.style.cursor = "ew-resize";
-    return;
+      if (!selectedEntryIds.has(entryId)) {
+        setSelection([entryId], false);
+      }
+
+      drag.selectedIds = Array.from(selectedEntryIds.size ? selectedEntryIds : [entryId]);
+      drag.baseTimes = new Map();
+      drag.selectedIds.forEach((id) => {
+        const item = state.entries.find((e) => e.calendarId === id);
+        if (!item) return;
+        const start = parseISO(item.startDateTime);
+        const end = parseISO(item.endDateTime);
+        if (!start || !end) return;
+        drag.baseTimes.set(id, { startMs: start.getTime(), endMs: end.getTime() });
+      });
+
+      const base = drag.baseTimes.get(entryId);
+      if (!base) return;
+      drag.active = true;
+      drag.entryId = entryId;
+      drag.side = side;
+      drag.mode = "resize";
+      drag.startX = event.clientX;
+      drag.startMs = base.startMs;
+      drag.endMs = base.endMs;
+      drag.element = season;
+      drag.trackName = entry.eventName;
+      drag.lastClientX = event.clientX;
+      document.body.style.cursor = "ew-resize";
+      return;
     }
 
     if (season) {
@@ -981,57 +1246,134 @@ function bindResizeHandles() {
       const entryId = season.dataset.id;
       const entry = state.entries.find((item) => item.calendarId === entryId);
       if (!entry) return;
-      const start = parseISO(entry.startDateTime);
-      const end = parseISO(entry.endDateTime);
-      if (!start || !end) return;
+
+      if (isToggle) {
+        toggleSelection(entryId);
+        return;
+      }
+
+      if (!selectedEntryIds.has(entryId)) {
+        setSelection([entryId], false);
+      }
+
+      drag.selectedIds = Array.from(selectedEntryIds.size ? selectedEntryIds : [entryId]);
+      drag.baseTimes = new Map();
+      drag.selectedIds.forEach((id) => {
+        const item = state.entries.find((e) => e.calendarId === id);
+        if (!item) return;
+        const start = parseISO(item.startDateTime);
+        const end = parseISO(item.endDateTime);
+        if (!start || !end) return;
+        drag.baseTimes.set(id, { startMs: start.getTime(), endMs: end.getTime() });
+      });
+
+      const base = drag.baseTimes.get(entryId);
+      if (!base) return;
       drag.active = true;
       drag.entryId = entryId;
       drag.side = null;
       drag.mode = "move";
       drag.startX = event.clientX;
-      drag.startMs = start.getTime();
-      drag.endMs = end.getTime();
+      drag.startMs = base.startMs;
+      drag.endMs = base.endMs;
       drag.element = season;
+      drag.trackName = entry.eventName;
+      drag.lastClientX = event.clientX;
       document.body.style.cursor = "grabbing";
     }
   });
 
-  window.addEventListener("pointermove", (event) => {
+  const applyDragMove = (clientX) => {
     if (!drag.active) return;
-    const deltaX = event.clientX - drag.startX;
+    const deltaX = clientX - drag.startX;
     const deltaMs = (deltaX / state.zoom) * MS_PER_HOUR;
-    const entry = state.entries.find((item) => item.calendarId === drag.entryId);
-    if (!entry) return;
-    let nextStart = drag.startMs;
-    let nextEnd = drag.endMs;
+    const snapMs = SNAP_MINUTES * MS_PER_MINUTE;
+    let snappedDelta = Math.round(deltaMs / snapMs) * snapMs;
+    const selectedIds = drag.selectedIds && drag.selectedIds.length ? drag.selectedIds : [drag.entryId];
+    const excludeSet = new Set(selectedIds);
+    let minDelta = -Infinity;
+    let maxDelta = Infinity;
 
-    const snap = (ms) => Math.round(ms / (SNAP_MINUTES * MS_PER_MINUTE)) * SNAP_MINUTES * MS_PER_MINUTE;
-
-    if (drag.mode === "resize") {
-      if (drag.side === "start") {
-        nextStart = Math.min(drag.endMs - 5 * MS_PER_MINUTE, drag.startMs + deltaMs);
-        nextStart = snap(nextStart);
-      } else {
-        nextEnd = Math.max(drag.startMs + 5 * MS_PER_MINUTE, drag.endMs + deltaMs);
-        nextEnd = snap(nextEnd);
+    selectedIds.forEach((id) => {
+      const base = drag.baseTimes?.get(id);
+      const entry = state.entries.find((item) => item.calendarId === id);
+      if (!base || !entry) return;
+      const neighbors = getTrackNeighbors(entry.eventName, id, base.startMs, excludeSet);
+      if (drag.mode === "move") {
+        minDelta = Math.max(minDelta, neighbors.prevEndMs - base.startMs);
+        maxDelta = Math.min(maxDelta, neighbors.nextStartMs - base.endMs);
+      } else if (drag.mode === "resize" && drag.side === "start") {
+        minDelta = Math.max(minDelta, neighbors.prevEndMs - base.startMs);
+        maxDelta = Math.min(maxDelta, base.endMs - 5 * MS_PER_MINUTE - base.startMs);
+      } else if (drag.mode === "resize" && drag.side === "end") {
+        minDelta = Math.max(minDelta, base.startMs + 5 * MS_PER_MINUTE - base.endMs);
+        maxDelta = Math.min(maxDelta, neighbors.nextStartMs - base.endMs);
       }
-    } else if (drag.mode === "move") {
-      nextStart = snap(drag.startMs + deltaMs);
-      const duration = drag.endMs - drag.startMs;
-      nextEnd = nextStart + duration;
+    });
+
+    if (minDelta > maxDelta) {
+      snappedDelta = 0;
+    } else {
+      snappedDelta = Math.min(Math.max(snappedDelta, minDelta), maxDelta);
     }
 
-    entry.startDateTime = formatWithOffset(new Date(nextStart));
-    entry.endDateTime = formatWithOffset(new Date(nextEnd));
-    updateSeasonElement(entry, drag.element);
+    selectedIds.forEach((id) => {
+      const base = drag.baseTimes?.get(id);
+      const entry = state.entries.find((item) => item.calendarId === id);
+      if (!base || !entry) return;
+      let nextStart = base.startMs;
+      let nextEnd = base.endMs;
+
+      if (drag.mode === "move") {
+        nextStart = base.startMs + snappedDelta;
+        nextEnd = base.endMs + snappedDelta;
+      } else if (drag.mode === "resize" && drag.side === "start") {
+        nextStart = base.startMs + snappedDelta;
+      } else if (drag.mode === "resize" && drag.side === "end") {
+        nextEnd = base.endMs + snappedDelta;
+      }
+
+      entry.startDateTime = formatWithOffset(new Date(nextStart));
+      entry.endDateTime = formatWithOffset(new Date(nextEnd));
+      const seasonEl = lanes.querySelector(`.season[data-id="${CSS.escape(id)}"]`);
+      updateSeasonElement(entry, seasonEl || drag.element);
+    });
+
     updateSeasonFloatLabels();
+  };
+
+  window.addEventListener("pointermove", (event) => {
+    if (marquee.active) {
+      updateMarqueeRect(event.clientX, event.clientY);
+      return;
+    }
+    if (!drag.active) return;
+    drag.lastClientX = event.clientX;
+    if (drag.rafId) return;
+    drag.rafId = requestAnimationFrame(() => {
+      drag.rafId = null;
+      applyDragMove(drag.lastClientX);
+    });
   });
 
-  window.addEventListener("pointerup", () => {
+  window.addEventListener("pointerup", (event) => {
+    if (marquee.active) {
+      finishMarqueeSelection(event);
+      return;
+    }
     if (!drag.active) return;
     drag.active = false;
     drag.mode = null;
     drag.element = null;
+    drag.trackName = null;
+    drag.prevEndMs = null;
+    drag.nextStartMs = null;
+    drag.selectedIds = [];
+    drag.baseTimes = null;
+    if (drag.rafId) {
+      cancelAnimationFrame(drag.rafId);
+      drag.rafId = null;
+    }
     document.body.style.cursor = "default";
     recalcSurface();
     renderRuler();
@@ -1265,6 +1607,10 @@ function showSeasonInfoModal(entry) {
       showToast("End must be after start");
       return;
     }
+    if (hasTrackOverlap(entry.eventName, nextStart.getTime(), nextEnd.getTime(), entry.calendarId)) {
+      showToast("Season overlaps another on the same track");
+      return;
+    }
     const prevId = entry.calendarId;
     entry.calendarId = idValue;
     entry.startDateTime = formatWithOffset(nextStart);
@@ -1411,6 +1757,10 @@ function showNewSeasonModal() {
       showToast("End must be after start");
       return;
     }
+    if (hasTrackOverlap(track, start.getTime(), end.getTime(), null)) {
+      showToast("Season overlaps another on the same track");
+      return;
+    }
 
     const entry = {
       eventName: track,
@@ -1517,6 +1867,7 @@ function showImportModal() {
     state.entries = payload.entries;
     state.trackOrder = uniqueTracks(state.entries);
     selectedEntryId = null;
+    selectedEntryIds.clear();
     state.hiddenTracks = [];
     saveState();
     pushHistory();
@@ -1539,6 +1890,7 @@ function showClearModal() {
     state.entries = [];
     state.trackOrder = [];
     selectedEntryId = null;
+    selectedEntryIds.clear();
     state.hiddenTracks = [];
     localStorage.removeItem(STORAGE_KEY);
     pushHistory();
@@ -1576,7 +1928,7 @@ async function syncNowFromServer() {
 
 function setupZoomInput() {
   if (!zoomInput) return;
-  const clampPercent = (value) => Math.min(400, Math.max(10, value));
+  const clampPercent = (value) => Math.min(1000, Math.max(0.1, value));
   zoomInput.value = String(Math.round((state.zoom / BASE_ZOOM) * 100));
   zoomInput.addEventListener("change", () => {
     const raw = Number(zoomInput.value);
@@ -1584,11 +1936,7 @@ function setupZoomInput() {
     const percent = clampPercent(raw);
     zoomInput.value = String(percent);
     state.zoom = (BASE_ZOOM * percent) / 100;
-    recalcSurface();
-    renderLanes();
-    renderRuler();
-    applyViewX();
-    updateZoomIndicator();
+    updateZoomLayout();
     saveState();
   });
 }
@@ -1689,6 +2037,12 @@ window.addEventListener("keydown", (event) => {
     const next = state.history.redo.pop();
     state.history.undo.push(next);
     applySnapshot(next);
+  }
+  if (key === "a") {
+    event.preventDefault();
+    const ids = state.entries.map((entry) => entry.calendarId);
+    setSelection(ids, false);
+    return;
   }
   if (key === "d") {
     if (isEditableTarget(event.target)) return;
