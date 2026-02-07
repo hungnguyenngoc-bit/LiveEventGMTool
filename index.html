@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="vi">
 <head>
   <meta charset="utf-8" />
@@ -19,65 +19,17 @@
           <div class="subtitle">Timeline manager for live events</div>
         </div>
       </div>
-      <div class="actions">
-        <div class="timezone-control">
-          <label for="timezoneSelect">Time zone</label>
-          <select id="timezoneSelect" class="timezone-select"></select>
-        </div>
-        <div class="zoom-control">
-          <label for="zoomInput">Zoom %</label>
-          <input type="number" id="zoomInput" min="0.1" max="1000" step="0.1" />
-        </div>
-        <div class="zoom-indicator" id="zoomIndicator">Zoom 100%</div>
-        <button class="btn" id="btnNewSeason">New Season</button>
-        <button class="btn" id="btnImport">Import config</button>
-        <button class="btn" id="btnClear">Clear data</button>
-        <button class="btn primary" id="btnExport">Export config</button>
-      </div>
     </header>
 
-    <section class="timeline-shell">
-      <aside class="tracks" id="tracksPane">
-        <div class="tracks-header">
-          <div class="tracks-title">Tracks</div>
-          <div class="tracks-hint">Drag to reorder</div>
+    <main class="landing">
+      <div class="landing-card">
+        <div class="landing-title">Choose a page</div>
+        <div class="landing-actions">
+          <a class="tab-btn active" href="live-events.html">Live Events</a>
+          <a class="tab-btn" href="milestone-event.html">Milestone Event</a>
         </div>
-        <div class="tracks-body" id="tracksBody">
-          <div id="trackList"></div>
-        </div>
-      </aside>
-
-      <main class="timeline">
-        <div class="timeline-scroll" id="timelineScroll">
-          <div class="timeline-surface" id="timelineSurface">
-            <div class="hover-line" id="hoverLine" aria-hidden="true">
-              <div class="hover-time" id="hoverTime"></div>
-            </div>
-            <div class="now-line" id="currentTimeLine" aria-hidden="true"></div>
-            <div class="ruler" id="ruler">
-              <div class="ruler-row days" id="rulerDays"></div>
-              <div class="ruler-row hours" id="rulerHours"></div>
-            </div>
-            <div class="lanes" id="lanes"></div>
-          </div>
-          <div class="timeline-spacer" id="timelineSpacer" aria-hidden="true"></div>
-        </div>
-      </main>
-    </section>
-  </div>
-
-  <div class="modal" id="modal" aria-hidden="true">
-    <div class="modal-backdrop" data-close="true"></div>
-    <div class="modal-card" role="dialog" aria-modal="true">
-      <div class="modal-header">
-        <div class="modal-title" id="modalTitle">Modal</div>
-        <button class="icon-btn" id="modalClose" aria-label="Close">×</button>
       </div>
-      <div class="modal-body" id="modalBody"></div>
-      <div class="modal-footer" id="modalFooter"></div>
-    </div>
+    </main>
   </div>
-
-  <script src="app.js"></script>
 </body>
 </html>

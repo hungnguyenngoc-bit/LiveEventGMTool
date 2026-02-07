@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Milestone Event - Live Event GM Tool</title>
+  <link rel="icon" type="image/png" href="Icon/favicon.png" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="tabs/le3.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">
+          <img src="Icon/logo.png" alt="Live Event GM Tool logo" />
+        </div>
+        <div>
+          <div class="title">Live Event GM Tool</div>
+          <div class="subtitle">Milestone Event timeline</div>
+        </div>
+      </div>
+      <div class="nav-path">Home / Milestone Event</div>
+    </header>
+
+    <div class="le3-layout" id="le3Layout">
+      <section class="le3-section le3-timeline" aria-label="Timeline section">
+        <div class="le3-timeline-scroll" id="le3Scroll">
+          <div class="le3-ruler" id="le3Ruler" aria-label="Timeline ruler"></div>
+          <div class="le3-track" id="le3Track" aria-label="Timeline track">
+            <div class="le3-track-surface" id="le3TrackSurface"></div>
+          </div>
+        </div>
+      </section>
+
+      <div class="le3-divider" id="le3Divider" role="separator" aria-orientation="vertical" tabindex="0"></div>
+
+      <section class="le3-section le3-data" aria-label="Section 2">
+        <div class="le3-panel le3-actions-panel">
+          <div class="le3-panel-title">Actions</div>
+          <div class="le3-actions">
+            <button class="le3-btn le3-btn-new" id="le3BtnNew">New Event</button>
+            <button class="le3-btn le3-btn-import" id="le3BtnImport">Import Config</button>
+            <button class="le3-btn le3-btn-export" id="le3BtnExport">Export Config</button>
+            <button class="le3-btn le3-btn-clear" id="le3BtnClear">Clear Data</button>
+          </div>
+          <div class="le3-helper">Select an event on the timeline to view details.</div>
+        </div>
+
+        <div class="le3-panel le3-detail-panel" id="le3DetailPanel" hidden>
+          <div class="le3-panel-title">Selected Event</div>
+          <div class="le3-image-grid" id="le3DetailImages"></div>
+        </div>
+      </section>
+    </div>
+
+    <nav class="bottom-tabs" aria-label="Main navigation">
+      <a class="tab-btn" href="live-events.html">Live Events</a>
+      <a class="tab-btn active" href="milestone-event.html">Milestone Event</a>
+    </nav>
+  </div>
+
+  <div class="le3-modal" id="le3Modal" aria-hidden="true">
+    <div class="le3-modal-backdrop" data-close="true"></div>
+    <div class="le3-modal-card" role="dialog" aria-modal="true">
+      <div class="le3-modal-header">
+        <div class="le3-modal-title" id="le3ModalTitle">Modal</div>
+        <button class="le3-icon-btn" id="le3ModalClose" aria-label="Close">&times;</button>
+      </div>
+      <div class="le3-modal-body" id="le3ModalBody"></div>
+      <div class="le3-modal-footer" id="le3ModalFooter"></div>
+    </div>
+  </div>
+
+  <script src="tabs/le3.js"></script>
+</body>
+</html>

@@ -1,0 +1,370 @@
+{
+  "events": [
+    {
+	  "startDateTime": "2026-01-20T10:31:00+07:00",
+      "endDateTime": "2026-01-29T10:35:00+07:00",
+      "minDurationHours": 0,
+      "titleUrl": "https://d1xncywiopk9ma.cloudfront.net/Songs/MilestoneEvent/TokenCollection/Fantashtic/Fantashtic_Title.png",
+      "titleText": "Fantashtic",
+      "tokenUrl": "https://d1xncywiopk9ma.cloudfront.net/Songs/MilestoneEvent/TokenCollection/Fantashtic/Fantashtic_Token.png",
+      "tokenID": "Ash",
+      "keyVisualUrl": "",
+      "layoutIndex": 1,
+      "backgroundUrl": "https://d1xncywiopk9ma.cloudfront.net/Songs/MilestoneEvent/TokenCollection/Fantashtic/Fantashtic_Background.png",
+      "instructionBackgroundUrl": "https://d1xncywiopk9ma.cloudfront.net/Songs/MilestoneEvent/TokenCollection/Fantashtic/Fantashtic_Background.png",
+      "playButtonImageUrl": "https://d1xncywiopk9ma.cloudfront.net/Songs/MilestoneEvent/TokenCollection/Fantashtic/Fantashtic_PlayButton.png",
+      "infoButtonImageUrl": "https://d1xncywiopk9ma.cloudfront.net/Songs/MilestoneEvent/TokenCollection/Fantashtic/Fantashtic_Info.png",
+      "closeButtonImageUrl": "https://d1xncywiopk9ma.cloudfront.net/Songs/MilestoneEvent/TokenCollection/Fantashtic/Fantashtic_Close.png",
+      "progressBarBackgroundUrl": "",
+      "progressBarFillUrl": "",
+      "descriptionColor": "#62325F",
+      "descriptionInstructionColor": "#62325F",
+      "playTextColor": "#FFFFFF",
+      "okInstructionTextColor": "#FFFFFF",
+      "playTextKey": "OKAY",
+      "tokenName": "Book",
+      "subInfoKey": "SUB_INFO_FANTASHTIC",
+      "instructionTitleKey": "INS_TITLE_FANTASHTIC",
+      "instructionSubInfoKey": "INS_SUB_INFO_FANTASHTIC",
+      "durationHours": 96,
+      "tokenRangeMin": 5,
+      "tokenRangeMax": 5,
+      "milestones": [
+        {
+          "milestone": 3,
+          "rewards": [
+            {
+              "type": "Gem",
+              "number": 10
+            }
+          ]
+        },
+        {
+          "milestone": 3,
+          "rewards": [
+            {
+              "type": "Gem",
+              "number": 5
+            }
+          ]
+        },
+        {
+          "milestone": 3,
+          "rewards": [
+            {
+              "type": "Booster;Shield",
+              "number": 1
+            }
+          ]
+        },
+        {
+          "milestone": 3,
+          "rewards": [
+            {
+              "type": "Gem",
+              "number": 10
+            }
+          ]
+        },
+        {
+          "milestone": 3,
+          "rewards": [
+            {
+              "type": "Booster;Shield",
+              "number": 1
+            }
+          ]
+        },
+        {
+          "milestone": 3,
+          "rewards": [
+            {
+              "type": "Gem",
+              "number": 5
+            }
+          ]
+        },
+        {
+          "milestone": 3,
+          "rewards": [
+            {
+              "type": "Booster;HyperStar",
+              "number": 1
+            }
+          ]
+        },
+        {
+          "milestone": 3,
+          "rewards": [
+            {
+              "type": "Booster;TileTidy",
+              "number": 1
+            }
+          ]
+        },
+        {
+          "milestone": 3,
+          "rewards": [
+            {
+              "type": "Gem",
+              "number": 10
+            }
+          ]
+        },
+        {
+          "milestone": 3,
+          "rewards": [
+            {
+              "type": "Booster;HyperStar",
+              "number": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+	  "startDateTime": "2026-02-29T10:40:00+07:00",
+      "endDateTime": "2026-03-29T10:45:00+07:00",
+      "minDurationHours": 0,
+      "titleUrl": "https://d1xncywiopk9ma.cloudfront.net/Songs/MilestoneEvent/TokenCollection/SearchforFoamPads/Foampads_Title.png",
+      "titleText": "SearchForFoamPads",
+      "tokenUrl": "https://d1xncywiopk9ma.cloudfront.net/Songs/MilestoneEvent/TokenCollection/SearchforFoamPads/Foampads_Token.png",
+      "tokenID": "foampads",
+      "keyVisualUrl": "",
+      "layoutIndex": 1,
+      "backgroundUrl": "https://d1xncywiopk9ma.cloudfront.net/Songs/MilestoneEvent/TokenCollection/SearchforFoamPads/Foampads_background.png",
+      "instructionBackgroundUrl": "https://d1xncywiopk9ma.cloudfront.net/Songs/MilestoneEvent/TokenCollection/SearchforFoamPads/Foampads_background.png",
+      "playButtonImageUrl": "https://d1xncywiopk9ma.cloudfront.net/Songs/MilestoneEvent/TokenCollection/SearchforFoamPads/Foampads_PlayButton.png",
+      "infoButtonImageUrl": "https://d1xncywiopk9ma.cloudfront.net/Songs/MilestoneEvent/TokenCollection/SearchforFoamPads/Foampads_Info.png",
+      "closeButtonImageUrl": "https://d1xncywiopk9ma.cloudfront.net/Songs/MilestoneEvent/TokenCollection/SearchforFoamPads/Foampads_Close.png",
+      "progressBarBackgroundUrl": "",
+      "progressBarFillUrl": "",
+      "descriptionColor": "#62325F",
+      "descriptionInstructionColor": "#62325F",
+      "playTextColor": "#FFFFFF",
+      "okInstructionTextColor": "#FFFFFF",
+      "playTextKey": "OKAY",
+      "tokenName": "Foam Pads",
+      "subInfoKey": "SUB_INFO_SPONGE",
+      "instructionTitleKey": "INS_TITLE_SPONGE",
+      "instructionSubInfoKey": "INS_SUB_INFO_SPONGE",
+      "durationHours": 96,
+      "tokenRangeMin": 5,
+      "tokenRangeMax": 5,
+      "milestones": [
+        {
+          "milestone": 3,
+          "rewards": [
+            {
+              "type": "Gem",
+              "number": 10
+            }
+          ]
+        },
+        {
+          "milestone": 3,
+          "rewards": [
+            {
+              "type": "Gem",
+              "number": 5
+            }
+          ]
+        },
+        {
+          "milestone": 3,
+          "rewards": [
+            {
+              "type": "Booster;Shield",
+              "number": 1
+            }
+          ]
+        },
+        {
+          "milestone": 3,
+          "rewards": [
+            {
+              "type": "Gem",
+              "number": 10
+            }
+          ]
+        },
+        {
+          "milestone": 3,
+          "rewards": [
+            {
+              "type": "Booster;Shield",
+              "number": 1
+            }
+          ]
+        },
+        {
+          "milestone": 3,
+          "rewards": [
+            {
+              "type": "Gem",
+              "number": 5
+            }
+          ]
+        },
+        {
+          "milestone": 3,
+          "rewards": [
+            {
+              "type": "Booster;HyperStar",
+              "number": 1
+            }
+          ]
+        },
+        {
+          "milestone": 3,
+          "rewards": [
+            {
+              "type": "Booster;TileTidy",
+              "number": 1
+            }
+          ]
+        },
+        {
+          "milestone": 3,
+          "rewards": [
+            {
+              "type": "Gem",
+              "number": 10
+            }
+          ]
+        },
+        {
+          "milestone": 3,
+          "rewards": [
+            {
+              "type": "Booster;HyperStar",
+              "number": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+	  "startDateTime": "2026-04-26T10:50:00+07:00",
+      "endDateTime": "2026-04-29T10:55:00+07:00",
+      "minDurationHours": 0,
+      "titleUrl": "https://d1xncywiopk9ma.cloudfront.net/Songs/MilestoneEvent/TokenCollection/Dancescape/Dancescape_Title_2026.png",
+      "titleText": "Dancescape",
+      "tokenUrl": "https://d1xncywiopk9ma.cloudfront.net/Songs/MilestoneEvent/TokenCollection/Dancescape/Dancescape_Token.png",
+      "tokenID": "diary",
+      "keyVisualUrl": "",
+      "layoutIndex": 1,
+      "backgroundUrl": "https://d1xncywiopk9ma.cloudfront.net/Songs/MilestoneEvent/TokenCollection/Dancescape/Dancescape_Background.png",
+      "instructionBackgroundUrl": "https://d1xncywiopk9ma.cloudfront.net/Songs/MilestoneEvent/TokenCollection/Dancescape/Dancescape_Instruction_Background.png",
+      "playButtonImageUrl": "https://d1xncywiopk9ma.cloudfront.net/Songs/MilestoneEvent/TokenCollection/Dancescape/button.png",
+      "infoButtonImageUrl": "https://d1xncywiopk9ma.cloudfront.net/Songs/MilestoneEvent/TokenCollection/Dancescape/Dancescape_Info.png",
+      "closeButtonImageUrl": "https://d1xncywiopk9ma.cloudfront.net/Songs/MilestoneEvent/TokenCollection/Dancescape/Dancescape_Close.png",
+      "progressBarBackgroundUrl": "",
+      "progressBarFillUrl": "",
+      "descriptionColor": "#62325F",
+      "descriptionInstructionColor": "#62325F",
+      "playTextColor": "#FFFFFF",
+      "okInstructionTextColor": "#FFFFFF",
+      "playTextKey": "OKAY",
+      "tokenName": "Book",
+      "subInfoKey": "SUB_INFO_DANCESCAPE",
+      "instructionTitleKey": "INS_TITLE_DANCESCAPE",
+      "instructionSubInfoKey": "INS_SUB_INFO_DANCESCAPE",
+      "durationHours": 96,
+      "tokenRangeMin": 5,
+      "tokenRangeMax": 5,
+      "milestones": [
+        {
+          "milestone": 3,
+          "rewards": [
+            {
+              "type": "Gem",
+              "number": 10
+            }
+          ]
+        },
+        {
+          "milestone": 3,
+          "rewards": [
+            {
+              "type": "Gem",
+              "number": 5
+            }
+          ]
+        },
+        {
+          "milestone": 3,
+          "rewards": [
+            {
+              "type": "Booster;Shield",
+              "number": 1
+            }
+          ]
+        },
+        {
+          "milestone": 3,
+          "rewards": [
+            {
+              "type": "Gem",
+              "number": 10
+            }
+          ]
+        },
+        {
+          "milestone": 3,
+          "rewards": [
+            {
+              "type": "Booster;Shield",
+              "number": 1
+            }
+          ]
+        },
+        {
+          "milestone": 3,
+          "rewards": [
+            {
+              "type": "Gem",
+              "number": 5
+            }
+          ]
+        },
+        {
+          "milestone": 3,
+          "rewards": [
+            {
+              "type": "Booster;HyperStar",
+              "number": 1
+            }
+          ]
+        },
+        {
+          "milestone": 3,
+          "rewards": [
+            {
+              "type": "Booster;TileTidy",
+              "number": 1
+            }
+          ]
+        },
+        {
+          "milestone": 3,
+          "rewards": [
+            {
+              "type": "Gem",
+              "number": 10
+            }
+          ]
+        },
+        {
+          "milestone": 3,
+          "rewards": [
+            {
+              "type": "Booster;HyperStar",
+              "number": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
