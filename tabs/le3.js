@@ -924,6 +924,7 @@ function showHelpModal() {
       <div class="le3-help-title">Phím tắt</div>
       <ul class="le3-help-list">
         <li>Delete/Backspace: xóa event đang được chọn.</li>
+        <li>Ctrl/Cmd + D: duplicate selected event (auto shift to avoid overlap).</li>
       </ul>
     </div>
   `;
@@ -940,6 +941,49 @@ function deleteSelected() {
   saveState();
   renderAll();
   showToast("Event deleted");
+}
+
+function findNextAvailableRange(startMs, endMs, excludeId) {
+  const duration = Math.max(MS_PER_DAY, endMs - startMs);
+  let nextStart = startMs;
+  let nextEnd = nextStart + duration;
+  let guard = 0;
+  while (guard < 1000) {
+    const conflict = state.events.find((event) => {
+      if (event.__id === excludeId) return false;
+      const otherStart = parseISO(event.startDateTime);
+      const otherEnd = parseISO(event.endDateTime);
+      if (!otherStart || !otherEnd) return false;
+      return nextStart < otherEnd.getTime() && nextEnd > otherStart.getTime();
+    });
+    if (!conflict) break;
+    const conflictEnd = parseISO(conflict.endDateTime);
+    if (!conflictEnd) break;
+    nextStart = conflictEnd.getTime();
+    nextEnd = nextStart + duration;
+    guard += 1;
+  }
+  return { startMs: nextStart, endMs: nextEnd };
+}
+
+function duplicateSelectedEvent() {
+  if (!state.selectedId) return;
+  const source = state.events.find((event) => event.__id === state.selectedId);
+  if (!source) return;
+  const start = parseISO(source.startDateTime);
+  const end = parseISO(source.endDateTime);
+  if (!start || !end) return;
+  const duration = Math.max(MS_PER_DAY, end.getTime() - start.getTime());
+  const initialStart = end.getTime();
+  const initialEnd = initialStart + duration;
+  const nextRange = findNextAvailableRange(initialStart, initialEnd, source.__id);
+  const clone = { ...source, __id: generateId() };
+  updateEventTimes(clone, nextRange.startMs, nextRange.endMs, false);
+  state.events.push(clone);
+  state.selectedId = clone.__id;
+  saveState();
+  renderAll();
+  showToast("Event duplicated");
 }
 
 function renderAll() {
@@ -997,10 +1041,18 @@ le3TrackSurface.addEventListener("click", (event) => {
 });
 
 window.addEventListener("keydown", (event) => {
+  const isCtrl = event.ctrlKey || event.metaKey;
+  const key = event.key.toLowerCase();
   if (event.key === "Delete" || event.key === "Backspace") {
     if (isEditableTarget(event.target)) return;
     event.preventDefault();
     deleteSelected();
+    return;
+  }
+  if (isCtrl && key === "d") {
+    if (isEditableTarget(event.target)) return;
+    event.preventDefault();
+    duplicateSelectedEvent();
   }
 });
 
