@@ -221,7 +221,7 @@ function renderEvents(bounds) {
     if (state.selectedId === event.__id) {
       card.classList.add("selected");
     }
-    card.style.top = `${top}px`;
+    card.style.top = `${top-15}px`;
     card.style.height = `${height}px`;
     card.dataset.id = event.__id;
 
@@ -593,6 +593,70 @@ function showEventModal(event) {
       <label>End</label>
       <input type="datetime-local" id="le3EditEnd" lang="en-GB" />
     </div>
+    <div class="le3-field">
+      <label>Min Duration Hours (minDurationHours)</label>
+      <input type="number" id="le3EditMinDuration" step="0.1" />
+    </div>
+    <div class="le3-field">
+      <label>Layout Index (layoutIndex)</label>
+      <input type="number" id="le3EditLayoutIndex" step="1" />
+    </div>
+    <div class="le3-field">
+      <label>Token Range Min (tokenRangeMin)</label>
+      <input type="number" id="le3EditTokenRangeMin" step="1" />
+    </div>
+    <div class="le3-field">
+      <label>Token Range Max (tokenRangeMax)</label>
+      <input type="number" id="le3EditTokenRangeMax" step="1" />
+    </div>
+    <div class="le3-field">
+      <label>Play Text Key (playTextKey)</label>
+      <input type="text" id="le3EditPlayTextKey" />
+    </div>
+    <div class="le3-field">
+      <label>Sub Info Key (subInfoKey)</label>
+      <input type="text" id="le3EditSubInfoKey" />
+    </div>
+    <div class="le3-field">
+      <label>Instruction Title Key (instructionTitleKey)</label>
+      <input type="text" id="le3EditInstructionTitleKey" />
+    </div>
+    <div class="le3-field">
+      <label>Instruction Sub Info Key (instructionSubInfoKey)</label>
+      <input type="text" id="le3EditInstructionSubInfoKey" />
+    </div>
+    <div class="le3-field">
+      <label>Description Color (descriptionColor)</label>
+      <div class="le3-color-row">
+        <input type="color" id="le3EditDescriptionColor" />
+        <input type="text" id="le3EditDescriptionColorHex" placeholder="#000000" />
+        <span class="le3-color-preview" id="le3EditDescriptionColorPreview"></span>
+      </div>
+    </div>
+    <div class="le3-field">
+      <label>Description Instruction Color (descriptionInstructionColor)</label>
+      <div class="le3-color-row">
+        <input type="color" id="le3EditDescriptionInstructionColor" />
+        <input type="text" id="le3EditDescriptionInstructionColorHex" placeholder="#000000" />
+        <span class="le3-color-preview" id="le3EditDescriptionInstructionColorPreview"></span>
+      </div>
+    </div>
+    <div class="le3-field">
+      <label>Play Text Color (playTextColor)</label>
+      <div class="le3-color-row">
+        <input type="color" id="le3EditPlayTextColor" />
+        <input type="text" id="le3EditPlayTextColorHex" placeholder="#FFFFFF" />
+        <span class="le3-color-preview" id="le3EditPlayTextColorPreview"></span>
+      </div>
+    </div>
+    <div class="le3-field">
+      <label>OK Instruction Text Color (okInstructionTextColor)</label>
+      <div class="le3-color-row">
+        <input type="color" id="le3EditOkInstructionTextColor" />
+        <input type="text" id="le3EditOkInstructionTextColorHex" placeholder="#FFFFFF" />
+        <span class="le3-color-preview" id="le3EditOkInstructionTextColorPreview"></span>
+      </div>
+    </div>
   `;
 
   const saveBtn = createButton(isNew ? "Create" : "Save", "le3-btn-primary", () => {
@@ -601,6 +665,19 @@ function showEventModal(event) {
     const tokenIdValue = document.getElementById("le3EditTokenId").value.trim();
     const startValue = document.getElementById("le3EditStart").value;
     const endValue = document.getElementById("le3EditEnd").value;
+    const minDurationValue = parseFloat(document.getElementById("le3EditMinDuration").value);
+    const layoutIndexValue = parseInt(document.getElementById("le3EditLayoutIndex").value, 10);
+    const tokenRangeMinValue = parseInt(document.getElementById("le3EditTokenRangeMin").value, 10);
+    const tokenRangeMaxValue = parseInt(document.getElementById("le3EditTokenRangeMax").value, 10);
+    const playTextKeyValue = document.getElementById("le3EditPlayTextKey").value.trim();
+    const subInfoKeyValue = document.getElementById("le3EditSubInfoKey").value.trim();
+    const instructionTitleKeyValue = document.getElementById("le3EditInstructionTitleKey").value.trim();
+    const instructionSubInfoKeyValue = document.getElementById("le3EditInstructionSubInfoKey").value.trim();
+    const descriptionColorValue = document.getElementById("le3EditDescriptionColor").value;
+    const descriptionInstructionColorValue =
+      document.getElementById("le3EditDescriptionInstructionColor").value;
+    const playTextColorValue = document.getElementById("le3EditPlayTextColor").value;
+    const okInstructionTextColorValue = document.getElementById("le3EditOkInstructionTextColor").value;
 
     if (!startValue || !endValue) {
       showToast("Please select start/end time");
@@ -622,6 +699,20 @@ function showEventModal(event) {
     working.tokenID = tokenIdValue;
     working.startDateTime = formatWithOffset(nextStart);
     working.endDateTime = formatWithOffset(nextEnd);
+    working.minDurationHours = Number.isFinite(minDurationValue) ? minDurationValue : 0;
+    working.layoutIndex = Number.isFinite(layoutIndexValue) ? layoutIndexValue : 0;
+    working.tokenRangeMin = Number.isFinite(tokenRangeMinValue) ? tokenRangeMinValue : 0;
+    working.tokenRangeMax = Number.isFinite(tokenRangeMaxValue) ? tokenRangeMaxValue : 0;
+    working.playTextKey = playTextKeyValue;
+    working.subInfoKey = subInfoKeyValue;
+    working.instructionTitleKey = instructionTitleKeyValue;
+    working.instructionSubInfoKey = instructionSubInfoKeyValue;
+    working.descriptionColor = descriptionColorValue || working.descriptionColor || "#000000";
+    working.descriptionInstructionColor =
+      descriptionInstructionColorValue || working.descriptionInstructionColor || "#000000";
+    working.playTextColor = playTextColorValue || working.playTextColor || "#FFFFFF";
+    working.okInstructionTextColor =
+      okInstructionTextColorValue || working.okInstructionTextColor || "#FFFFFF";
 
     if (isNew) {
       working.__id = generateId();
@@ -648,10 +739,81 @@ function showEventModal(event) {
   document.getElementById("le3EditTokenId").value = working.tokenID || "";
   document.getElementById("le3EditStart").value = toLocalInput(start);
   document.getElementById("le3EditEnd").value = toLocalInput(end);
+  document.getElementById("le3EditMinDuration").value =
+    Number.isFinite(working.minDurationHours) ? working.minDurationHours : 0;
+  document.getElementById("le3EditLayoutIndex").value =
+    Number.isFinite(working.layoutIndex) ? working.layoutIndex : 0;
+  document.getElementById("le3EditTokenRangeMin").value =
+    Number.isFinite(working.tokenRangeMin) ? working.tokenRangeMin : 0;
+  document.getElementById("le3EditTokenRangeMax").value =
+    Number.isFinite(working.tokenRangeMax) ? working.tokenRangeMax : 0;
+  document.getElementById("le3EditPlayTextKey").value = working.playTextKey || "";
+  document.getElementById("le3EditSubInfoKey").value = working.subInfoKey || "";
+  document.getElementById("le3EditInstructionTitleKey").value = working.instructionTitleKey || "";
+  document.getElementById("le3EditInstructionSubInfoKey").value =
+    working.instructionSubInfoKey || "";
+  const setColorField = (colorInputId, hexInputId, previewId, value, fallback) => {
+    const normalized = value && /^#([0-9a-f]{6})$/i.test(value) ? value : fallback;
+    const colorInput = document.getElementById(colorInputId);
+    const hexInput = document.getElementById(hexInputId);
+    const preview = document.getElementById(previewId);
+    colorInput.value = normalized;
+    hexInput.value = normalized;
+    preview.style.background = normalized;
+
+    colorInput.addEventListener("input", () => {
+      hexInput.value = colorInput.value;
+      preview.style.background = colorInput.value;
+    });
+
+    hexInput.addEventListener("input", () => {
+      const raw = hexInput.value.trim();
+      if (!/^#([0-9a-f]{6})$/i.test(raw)) return;
+      colorInput.value = raw;
+      preview.style.background = raw;
+    });
+  };
+
+  setColorField(
+    "le3EditDescriptionColor",
+    "le3EditDescriptionColorHex",
+    "le3EditDescriptionColorPreview",
+    working.descriptionColor,
+    "#000000"
+  );
+  setColorField(
+    "le3EditDescriptionInstructionColor",
+    "le3EditDescriptionInstructionColorHex",
+    "le3EditDescriptionInstructionColorPreview",
+    working.descriptionInstructionColor,
+    "#000000"
+  );
+  setColorField(
+    "le3EditPlayTextColor",
+    "le3EditPlayTextColorHex",
+    "le3EditPlayTextColorPreview",
+    working.playTextColor,
+    "#FFFFFF"
+  );
+  setColorField(
+    "le3EditOkInstructionTextColor",
+    "le3EditOkInstructionTextColorHex",
+    "le3EditOkInstructionTextColorPreview",
+    working.okInstructionTextColor,
+    "#FFFFFF"
+  );
 }
 
 function showExportModal() {
-  const payload = { events: state.events.map(stripInternal) };
+  const sortedEvents = [...state.events].sort((a, b) => {
+    const startA = parseISO(a.startDateTime)?.getTime() ?? 0;
+    const startB = parseISO(b.startDateTime)?.getTime() ?? 0;
+    if (startA !== startB) return startA - startB;
+    const endA = parseISO(a.endDateTime)?.getTime() ?? 0;
+    const endB = parseISO(b.endDateTime)?.getTime() ?? 0;
+    return endA - endB;
+  });
+  const payload = { events: sortedEvents.map(stripInternal) };
   const output = JSON.stringify(payload, null, 2);
   const body = `
     <div class="le3-field">
