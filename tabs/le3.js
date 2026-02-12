@@ -7,6 +7,7 @@ const le3BtnNew = document.getElementById("le3BtnNew");
 const le3BtnImport = document.getElementById("le3BtnImport");
 const le3BtnExport = document.getElementById("le3BtnExport");
 const le3BtnClear = document.getElementById("le3BtnClear");
+const le3HelpBtn = document.getElementById("le3HelpBtn");
 const le3Modal = document.getElementById("le3Modal");
 const le3ModalTitle = document.getElementById("le3ModalTitle");
 const le3ModalBody = document.getElementById("le3ModalBody");
@@ -899,6 +900,37 @@ function showClearModal() {
   openModal("Clear data", body, [cancelBtn, clearBtn]);
 }
 
+function showHelpModal() {
+  const body = `
+    <div class="le3-help-section">
+      <div class="le3-help-title">Timeline</div>
+      <ul class="le3-help-list">
+        <li>Nhấp 1 lần vào event để chọn và xem chi tiết ở panel bên phải.</li>
+        <li>Nhấp đúp vào event để mở form chỉnh sửa.</li>
+        <li>Kéo event để di chuyển theo ngày (tự snap theo ngày).</li>
+        <li>Kéo tay cầm trên/dưới để thay đổi thời lượng.</li>
+      </ul>
+    </div>
+    <div class="le3-help-section">
+      <div class="le3-help-title">Actions</div>
+      <ul class="le3-help-list">
+        <li>New Event: tạo event mới.</li>
+        <li>Import Config: dán JSON để nạp dữ liệu.</li>
+        <li>Export Config: xuất JSON để lưu cấu hình.</li>
+        <li>Clear Data: xóa toàn bộ dữ liệu đang lưu.</li>
+      </ul>
+    </div>
+    <div class="le3-help-section">
+      <div class="le3-help-title">Phím tắt</div>
+      <ul class="le3-help-list">
+        <li>Delete/Backspace: xóa event đang được chọn.</li>
+      </ul>
+    </div>
+  `;
+  const closeBtn = createButton("Close", "le3-btn-ghost", closeModal);
+  openModal("Hướng dẫn thao tác - Milestone Event", body, [closeBtn]);
+}
+
 function deleteSelected() {
   if (!state.selectedId) return;
   const index = state.events.findIndex((event) => event.__id === state.selectedId);
@@ -952,6 +984,7 @@ le3BtnNew.addEventListener("click", () => showEventModal(null));
 le3BtnImport.addEventListener("click", showImportModal);
 le3BtnExport.addEventListener("click", showExportModal);
 le3BtnClear.addEventListener("click", showClearModal);
+if (le3HelpBtn) le3HelpBtn.addEventListener("click", showHelpModal);
 le3ModalClose.addEventListener("click", closeModal);
 le3Modal.addEventListener("click", (event) => {
   if (event.target.dataset.close) closeModal();

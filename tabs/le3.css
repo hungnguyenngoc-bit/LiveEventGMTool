@@ -418,6 +418,31 @@
   gap: 12px;
 }
 
+.le3-help-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #f8f9ff;
+}
+
+.le3-help-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.le3-help-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  color: var(--muted);
+  display: grid;
+  gap: 6px;
+}
+
 .le3-modal-footer {
   padding: 14px 18px;
   border-top: 1px solid var(--line);

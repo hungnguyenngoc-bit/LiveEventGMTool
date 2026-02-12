@@ -16,6 +16,7 @@ const btnNewSeason = document.getElementById("btnNewSeason");
 const btnImport = document.getElementById("btnImport");
 const btnClear = document.getElementById("btnClear");
 const btnExport = document.getElementById("btnExport");
+const le1HelpBtn = document.getElementById("le1HelpBtn");
 const modal = document.getElementById("modal");
 const modalTitle = document.getElementById("modalTitle");
 const modalBody = document.getElementById("modalBody");
@@ -1932,6 +1933,51 @@ function showClearModal() {
   openModal("Clear data", body, [cancelBtn, clearBtn]);
 }
 
+function showHelpModal() {
+  const body = `
+    <div class="help-section">
+      <div class="help-title">Timeline</div>
+      <ul class="help-list">
+        <li>Cuộn hoặc kéo để di chuyển timeline theo chiều ngang.</li>
+        <li>Rê chuột để xem thời gian trên hover line.</li>
+        <li>Nhấp 1 lần vào season để chọn; nhấp đúp để mở chi tiết.</li>
+        <li>Kéo cạnh trái/phải của season để thay đổi thời lượng.</li>
+        <li>Drag and hold chuột phải hoặc hold ctrl + click để chọn nhiều season.</li>
+      </ul>
+    </div>
+    <div class="help-section">
+      <div class="help-title">Tracks</div>
+      <ul class="help-list">
+        <li>Kéo track để đổi thứ tự.</li>
+        <li>Nhấn icon mắt để ẩn/hiện track.</li>
+        <li>Nhấp tên track để đổi tên.</li>
+        <li>Nhấn chip 3 ký tự để xem danh sách seasons của track.</li>
+      </ul>
+    </div>
+    <div class="help-section">
+      <div class="help-title">Actions</div>
+      <ul class="help-list">
+        <li>New Season: tạo season mới.</li>
+        <li>Import config: dán JSON để nạp dữ liệu.</li>
+        <li>Export config: xuất JSON để lưu cấu hình.</li>
+        <li>Clear data: xóa toàn bộ dữ liệu đang lưu.</li>
+      </ul>
+    </div>
+    <div class="help-section">
+      <div class="help-title">Phím tắt</div>
+      <ul class="help-list">
+        <li>Delete/Backspace: xóa season đang chọn.</li>
+        <li>Ctrl/Cmd + Z: undo.</li>
+        <li>Ctrl/Cmd + Shift + Z hoặc Ctrl/Cmd + Y: redo.</li>
+        <li>Ctrl/Cmd + A: chọn tất cả.</li>
+        <li>D: nhân bản season đang chọn.</li>
+      </ul>
+    </div>
+  `;
+  const closeBtn = createButton("Close", "", closeModal);
+  openModal("Hướng dẫn thao tác - Live Events", body, [closeBtn]);
+}
+
 async function syncNowFromServer() {
   try {
     const response = await fetch("https://1.1.1.1", { method: "GET" });
@@ -2046,6 +2092,7 @@ btnNewSeason.addEventListener("click", showNewSeasonModal);
 btnImport.addEventListener("click", showImportModal);
 btnClear.addEventListener("click", showClearModal);
 btnExport.addEventListener("click", showExportModal);
+if (le1HelpBtn) le1HelpBtn.addEventListener("click", showHelpModal);
 modalClose.addEventListener("click", closeModal);
 modal.addEventListener("click", (event) => {
   if (event.target.dataset.close) closeModal();

@@ -95,6 +95,25 @@ body.no-select {
   border-radius: 999px;
 }
 
+.nav-helper {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  background: #f4f6fb;
+  border: 1px solid var(--line);
+  padding: 7px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+}
+
+.nav-helper:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
+  color: var(--ink);
+}
+
 .actions {
   display: flex;
   gap: 10px;
@@ -298,7 +317,8 @@ body.no-select {
     padding: 14px 20px;
   }
 
-  .nav-path {
+  .nav-path,
+  .nav-helper {
     margin-left: 0;
     order: 3;
   }
