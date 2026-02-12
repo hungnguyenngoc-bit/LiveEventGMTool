@@ -45,6 +45,8 @@ const dragState = {
   originMs: 0,
 };
 
+const tokenToneCache = new Map();
+
 function generateId() {
   idSeed += 1;
   return `ev-${Date.now()}-${idSeed}`;
@@ -114,6 +116,68 @@ function formatWithOffset(date) {
     ":" +
     minutes
   );
+}
+
+function hashString(value) {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+function hslToHex(h, s, l) {
+  const sat = Math.max(0, Math.min(1, s));
+  const light = Math.max(0, Math.min(1, l));
+  const c = (1 - Math.abs(2 * light - 1)) * sat;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = light - c / 2;
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  if (h < 60) {
+    r = c;
+    g = x;
+  } else if (h < 120) {
+    r = x;
+    g = c;
+  } else if (h < 180) {
+    g = c;
+    b = x;
+  } else if (h < 240) {
+    g = x;
+    b = c;
+  } else if (h < 300) {
+    r = x;
+    b = c;
+  } else {
+    r = c;
+    b = x;
+  }
+  const toHex = (v) => Math.round((v + m) * 255).toString(16).padStart(2, "0");
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+function getToneForTokenId(tokenId) {
+  if (!tokenId) return null;
+  const key = String(tokenId).trim();
+  if (!key) return null;
+  if (tokenToneCache.has(key)) return tokenToneCache.get(key);
+  const hash = hashString(key);
+  const hue = hash % 360;
+  const bg = hslToHex(hue, 0.45, 0.9);
+  const border = hslToHex(hue, 0.55, 0.78);
+  const accent = hslToHex(hue, 0.7, 0.45);
+  const tone = { bg, border, accent };
+  tokenToneCache.set(key, tone);
+  return tone;
+}
+
+function applyTone(card, tone) {
+  if (!tone) return;
+  card.style.setProperty("--le3-tone-bg", tone.bg);
+  card.style.setProperty("--le3-tone-border", tone.border);
+  card.style.setProperty("--le3-tone-accent", tone.accent);
 }
 
 function ensureIds(events) {
@@ -268,6 +332,10 @@ function renderEvents(bounds) {
     }
     if (trackIndex > 0) {
       card.classList.add("is-hidden-track");
+    }
+    const tone = getToneForTokenId(event.tokenID);
+    if (tone) {
+      applyTone(card, tone);
     }
     card.style.top = `${top-15}px`;
     card.style.height = `${height}px`;

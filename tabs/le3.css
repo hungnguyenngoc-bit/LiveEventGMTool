@@ -105,9 +105,9 @@
 
 .le3-event {
   position: absolute;
-  background: #d0e3ff;
-  border: 1px solid #cdddf5;
-  border-left: 6px solid #3e81d8;
+  background: var(--le3-tone-bg, #d0e3ff);
+  border: 1px solid var(--le3-tone-border, #cdddf5);
+  border-left: 6px solid var(--le3-tone-accent, #3e81d8);
   border-radius: 14px;
   padding: 20px 12px;
   cursor: pointer;
@@ -140,20 +140,20 @@
 
 .le3-event-resize {
   position: absolute;
-  left: 10px;
-  right: 10px;
-  height: 10px;
+  left: 0;
+  right: 0;
+  height: 6px;
   cursor: ns-resize;
   border-radius: 999px;
   background: rgba(11, 94, 215, 0.12);
 }
 
 .le3-event-resize.top {
-  top: 6px;
+  top: 0;
 }
 
 .le3-event-resize.bottom {
-  bottom: 6px;
+  bottom: 0;
 }
 
 .le3-event-resize::after {
@@ -162,7 +162,7 @@
   left: 50%;
   top: 50%;
   width: 34px;
-  height: 2px;
+  height: 1px;
   background: rgba(11, 94, 215, 0.45);
   transform: translate(-50%, -50%);
   border-radius: 999px;
@@ -197,6 +197,7 @@
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  pointer-events: none;
 }
 
 .le3-event-range {
@@ -205,6 +206,7 @@
   padding: 2px 8px;
   border-radius: 999px;
   font-weight: 600;
+  pointer-events: none;
 }
 
 .le3-panel {
