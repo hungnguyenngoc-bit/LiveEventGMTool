@@ -302,10 +302,17 @@ function updateDetailPanel() {
 
 function collectImageEntries(event) {
   const entries = [];
+  const requiredUrlKeys = ["milestoneBackgroundUrl", "milestoneTitleUrl"];
   Object.entries(event).forEach(([key, value]) => {
     if (typeof value !== "string") return;
     if (!key.toLowerCase().includes("url")) return;
     entries.push({ key, url: value.trim() });
+  });
+  requiredUrlKeys.forEach((key) => {
+    if (!entries.some((entry) => entry.key === key)) {
+      const value = typeof event[key] === "string" ? event[key] : "";
+      entries.push({ key, url: (value || "").trim() });
+    }
   });
   return entries;
 }
@@ -510,12 +517,14 @@ function createEmptyEvent() {
     keyVisualUrl: "",
     layoutIndex: 1,
     backgroundUrl: "",
+    milestoneBackgroundUrl: "",
     instructionBackgroundUrl: "",
     playButtonImageUrl: "",
     infoButtonImageUrl: "",
     closeButtonImageUrl: "",
     progressBarBackgroundUrl: "",
     progressBarFillUrl: "",
+    milestoneTitleUrl: "",
     descriptionColor: "#000000",
     descriptionInstructionColor: "#000000",
     playTextColor: "#FFFFFF",
