@@ -16,11 +16,16 @@ const le3ModalClose = document.getElementById("le3ModalClose");
 
 const STORAGE_KEY = "gm_milestone_state_v1";
 const MS_PER_DAY = 86400000;
+const MS_PER_MINUTE = 60000;
 const PADDING_DAYS = 30;
 
 const state = {
   events: [],
   selectedId: null,
+  history: {
+    undo: [],
+    redo: [],
+  },
 };
 
 let idSeed = 1;
@@ -35,6 +40,8 @@ const dragState = {
   baseEndMs: 0,
   lastStartMs: 0,
   lastEndMs: 0,
+  baseTrackIndex: 0,
+  lastTrackIndex: 0,
   originMs: 0,
 };
 
@@ -114,6 +121,9 @@ function ensureIds(events) {
     if (!event.__id) {
       event.__id = generateId();
     }
+    if (!Number.isFinite(event.trackIndex)) {
+      event.trackIndex = 0;
+    }
   });
 }
 
@@ -125,6 +135,30 @@ function stripInternal(event) {
 
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ events: state.events }));
+}
+
+function snapshotState() {
+  return JSON.stringify({
+    events: state.events,
+    selectedId: state.selectedId,
+  });
+}
+
+function pushHistory() {
+  const snap = snapshotState();
+  const last = state.history.undo[state.history.undo.length - 1];
+  if (snap === last) return;
+  state.history.undo.push(snap);
+  state.history.redo = [];
+}
+
+function applySnapshot(snapshot) {
+  const data = JSON.parse(snapshot);
+  state.events = Array.isArray(data.events) ? data.events : [];
+  ensureIds(state.events);
+  state.selectedId = data.selectedId || null;
+  saveState();
+  renderAll();
 }
 
 function loadState() {
@@ -194,6 +228,13 @@ function renderEvents(bounds) {
   const dayHeight = getDayHeight();
   const dayCount = Math.max(1, Math.ceil((bounds.end - bounds.start) / MS_PER_DAY));
   le3TrackSurface.style.height = `${dayCount * dayHeight}px`;
+  const surfaceWidth = le3TrackSurface.clientWidth || 0;
+  const trackGap = 18;
+  const trackWidths = [
+    Math.max(220, surfaceWidth * 0.6 - trackGap * 0.5),
+    Math.max(180, surfaceWidth * 0.4 - trackGap * 0.5),
+  ];
+  const trackLefts = [0, trackWidths[0] + trackGap];
 
   const todayStart = startOfDay(new Date()).getTime();
   if (todayStart >= bounds.start.getTime() && todayStart <= bounds.end.getTime()) {
@@ -211,9 +252,12 @@ function renderEvents(bounds) {
   });
 
   sorted.forEach((event) => {
-    const start = parseISO(event.startDateTime);
-    const end = parseISO(event.endDateTime);
+    const isDragging = dragState.active && event.__id === dragState.eventId;
+    const start = isDragging ? new Date(dragState.lastStartMs) : parseISO(event.startDateTime);
+    const end = isDragging ? new Date(dragState.lastEndMs) : parseISO(event.endDateTime);
     if (!start || !end) return;
+    const trackIndexRaw = isDragging ? dragState.lastTrackIndex : event.trackIndex ?? 0;
+    const trackIndex = trackIndexRaw === 1 ? 1 : 0;
     const top = ((start.getTime() - bounds.start.getTime()) / MS_PER_DAY) * dayHeight;
     const height = Math.max(24, ((end.getTime() - start.getTime()) / MS_PER_DAY) * dayHeight);
 
@@ -222,8 +266,13 @@ function renderEvents(bounds) {
     if (state.selectedId === event.__id) {
       card.classList.add("selected");
     }
+    if (trackIndex > 0) {
+      card.classList.add("is-hidden-track");
+    }
     card.style.top = `${top-15}px`;
     card.style.height = `${height}px`;
+    card.style.left = `${trackLefts[trackIndex]}px`;
+    card.style.width = `${trackWidths[trackIndex]}px`;
     card.dataset.id = event.__id;
 
     const content = document.createElement("div");
@@ -364,6 +413,7 @@ function renderDetailImages(event) {
 
     input.addEventListener("change", () => {
       const nextUrl = input.value.trim();
+      pushHistory();
       event[entry.key] = nextUrl;
       saveState();
       img.src = nextUrl || "";
@@ -405,9 +455,12 @@ function isEditableTarget(target) {
   return Boolean(target.closest("input, textarea, select, [contenteditable='true']"));
 }
 
-function hasOverlap(startMs, endMs, excludeId) {
+function hasOverlap(startMs, endMs, excludeId, trackIndex) {
+  if (trackIndex === 1) return false;
   return state.events.some((event) => {
     if (event.__id === excludeId) return false;
+    const eventTrack = Number.isFinite(event.trackIndex) ? event.trackIndex : 0;
+    if (Number.isFinite(trackIndex) && eventTrack !== trackIndex) return false;
     const otherStart = parseISO(event.startDateTime);
     const otherEnd = parseISO(event.endDateTime);
     if (!otherStart || !otherEnd) return false;
@@ -415,10 +468,8 @@ function hasOverlap(startMs, endMs, excludeId) {
   });
 }
 
-function snapToDay(ms, originMs) {
-  const offset = ms - originMs;
-  const snapped = Math.round(offset / MS_PER_DAY) * MS_PER_DAY;
-  return originMs + snapped;
+function snapToMinute(ms) {
+  return Math.round(ms / MS_PER_MINUTE) * MS_PER_MINUTE;
 }
 
 function updateEventTimes(event, startMs, endMs, shouldSave) {
@@ -446,11 +497,13 @@ function beginDrag(event, mode, mouseEvent) {
   dragState.baseEndMs = end.getTime();
   dragState.lastStartMs = dragState.baseStartMs;
   dragState.lastEndMs = dragState.baseEndMs;
+  dragState.baseTrackIndex = Number.isFinite(event.trackIndex) ? event.trackIndex : 0;
+  dragState.lastTrackIndex = dragState.baseTrackIndex;
   dragState.originMs = currentBounds.start.getTime();
   document.body.classList.add("no-select");
 }
 
-function applyDrag(clientY) {
+function applyDrag(clientY, clientX) {
   if (!dragState.active || !currentBounds) return;
   const target = state.events.find((item) => item.__id === dragState.eventId);
   if (!target) return;
@@ -465,6 +518,13 @@ function applyDrag(clientY) {
   if (dragState.mode === "move") {
     nextStartMs += deltaMs;
     nextEndMs += deltaMs;
+    if (typeof clientX === "number") {
+      const rect = le3TrackSurface.getBoundingClientRect();
+      const relX = clientX - rect.left;
+      const width = Math.max(1, rect.width);
+      const t1 = width * 0.6;
+      dragState.lastTrackIndex = relX < t1 ? 0 : 1;
+    }
   } else if (dragState.mode === "resize-end") {
     nextEndMs += deltaMs;
     if (nextEndMs <= nextStartMs + MS_PER_DAY) {
@@ -477,19 +537,13 @@ function applyDrag(clientY) {
     }
   }
 
-  nextStartMs = snapToDay(nextStartMs, dragState.originMs);
-  nextEndMs = snapToDay(nextEndMs, dragState.originMs);
-  if (nextEndMs <= nextStartMs) {
-    nextEndMs = nextStartMs + MS_PER_DAY;
-  }
-
-  if (hasOverlap(nextStartMs, nextEndMs, target.__id)) {
+  const activeTrackIndex = dragState.lastTrackIndex === 1 ? 1 : 0;
+  if (hasOverlap(nextStartMs, nextEndMs, target.__id, activeTrackIndex)) {
     return;
   }
 
   dragState.lastStartMs = nextStartMs;
   dragState.lastEndMs = nextEndMs;
-  updateEventTimes(target, nextStartMs, nextEndMs, false);
   renderAll();
 }
 
@@ -497,7 +551,20 @@ function endDrag() {
   if (!dragState.active) return;
   const target = state.events.find((item) => item.__id === dragState.eventId);
   if (target) {
-    updateEventTimes(target, dragState.lastStartMs, dragState.lastEndMs, true);
+    let nextStartMs = snapToMinute(dragState.lastStartMs);
+    let nextEndMs = snapToMinute(dragState.lastEndMs);
+    if (nextEndMs <= nextStartMs) {
+      nextEndMs = nextStartMs + MS_PER_DAY;
+    }
+    const nextTrackIndex = dragState.lastTrackIndex === 1 ? 1 : 0;
+    if (hasOverlap(nextStartMs, nextEndMs, target.__id, nextTrackIndex)) {
+      const resolved = findNextAvailableRange(nextStartMs, nextEndMs, target.__id, nextTrackIndex);
+      nextStartMs = resolved.startMs;
+      nextEndMs = resolved.endMs;
+    }
+    target.trackIndex = nextTrackIndex;
+    updateEventTimes(target, nextStartMs, nextEndMs, true);
+    pushHistory();
   }
   dragState.active = false;
   dragState.mode = null;
@@ -537,6 +604,7 @@ function createEmptyEvent() {
     durationHours: 0,
     tokenRangeMin: 0,
     tokenRangeMax: 0,
+    trackIndex: 0,
     milestones: [],
   };
 }
@@ -699,7 +767,8 @@ function showEventModal(event) {
       showToast("End must be after start");
       return;
     }
-    if (hasOverlap(nextStart.getTime(), nextEnd.getTime(), working.__id)) {
+    const trackIndex = Number.isFinite(working.trackIndex) ? working.trackIndex : 0;
+    if (hasOverlap(nextStart.getTime(), nextEnd.getTime(), working.__id, trackIndex)) {
       showToast("Event overlaps another event");
       return;
     }
@@ -736,6 +805,7 @@ function showEventModal(event) {
     }
 
     saveState();
+    pushHistory();
     renderAll();
     closeModal();
     showToast(isNew ? "Event created" : "Event updated");
@@ -815,7 +885,8 @@ function showEventModal(event) {
 }
 
 function showExportModal() {
-  const sortedEvents = [...state.events].sort((a, b) => {
+  const visibleEvents = state.events.filter((event) => (event.trackIndex ?? 0) === 0);
+  const sortedEvents = [...visibleEvents].sort((a, b) => {
     const startA = parseISO(a.startDateTime)?.getTime() ?? 0;
     const startB = parseISO(b.startDateTime)?.getTime() ?? 0;
     if (startA !== startB) return startA - startB;
@@ -883,6 +954,7 @@ function showImportModal() {
     ensureIds(state.events);
     state.selectedId = null;
     saveState();
+    pushHistory();
     renderAll();
     closeModal();
     showToast("Import success");
@@ -901,6 +973,7 @@ function showClearModal() {
     state.events = [];
     state.selectedId = null;
     localStorage.removeItem(STORAGE_KEY);
+    pushHistory();
     renderAll();
     closeModal();
     showToast("Data cleared");
@@ -934,6 +1007,8 @@ function showHelpModal() {
       <ul class="le3-help-list">
         <li>Delete/Backspace: xóa event đang được chọn.</li>
         <li>Ctrl/Cmd + D: duplicate selected event (auto shift to avoid overlap).</li>
+        <li>Ctrl/Cmd + Z: undo.</li>
+        <li>Ctrl/Cmd + Y: redo.</li>
       </ul>
     </div>
   `;
@@ -948,11 +1023,12 @@ function deleteSelected() {
   state.events.splice(index, 1);
   state.selectedId = null;
   saveState();
+  pushHistory();
   renderAll();
   showToast("Event deleted");
 }
 
-function findNextAvailableRange(startMs, endMs, excludeId) {
+function findNextAvailableRange(startMs, endMs, excludeId, trackIndex) {
   const duration = Math.max(MS_PER_DAY, endMs - startMs);
   let nextStart = startMs;
   let nextEnd = nextStart + duration;
@@ -960,6 +1036,8 @@ function findNextAvailableRange(startMs, endMs, excludeId) {
   while (guard < 1000) {
     const conflict = state.events.find((event) => {
       if (event.__id === excludeId) return false;
+      const eventTrack = Number.isFinite(event.trackIndex) ? event.trackIndex : 0;
+      if (Number.isFinite(trackIndex) && eventTrack !== trackIndex) return false;
       const otherStart = parseISO(event.startDateTime);
       const otherEnd = parseISO(event.endDateTime);
       if (!otherStart || !otherEnd) return false;
@@ -985,12 +1063,14 @@ function duplicateSelectedEvent() {
   const duration = Math.max(MS_PER_DAY, end.getTime() - start.getTime());
   const initialStart = end.getTime();
   const initialEnd = initialStart + duration;
-  const nextRange = findNextAvailableRange(initialStart, initialEnd, source.__id);
-  const clone = { ...source, __id: generateId() };
+  const trackIndex = Number.isFinite(source.trackIndex) ? source.trackIndex : 0;
+  const nextRange = findNextAvailableRange(initialStart, initialEnd, source.__id, trackIndex);
+  const clone = { ...source, __id: generateId(), trackIndex };
   updateEventTimes(clone, nextRange.startMs, nextRange.endMs, false);
   state.events.push(clone);
   state.selectedId = clone.__id;
   saveState();
+  pushHistory();
   renderAll();
   showToast("Event duplicated");
 }
@@ -1028,6 +1108,7 @@ async function bootstrap() {
   }
   ensureIds(state.events);
   renderAll();
+  pushHistory();
   requestAnimationFrame(() => {
     focusToday();
   });
@@ -1062,12 +1143,30 @@ window.addEventListener("keydown", (event) => {
     if (isEditableTarget(event.target)) return;
     event.preventDefault();
     duplicateSelectedEvent();
+    return;
+  }
+  if (!isCtrl) return;
+  if (key === "z" && !event.shiftKey) {
+    event.preventDefault();
+    if (state.history.undo.length < 2) return;
+    const current = state.history.undo.pop();
+    state.history.redo.push(current);
+    const prev = state.history.undo[state.history.undo.length - 1];
+    applySnapshot(prev);
+    return;
+  }
+  if (key === "y" || (key === "z" && event.shiftKey)) {
+    event.preventDefault();
+    if (!state.history.redo.length) return;
+    const next = state.history.redo.pop();
+    state.history.undo.push(next);
+    applySnapshot(next);
   }
 });
 
 window.addEventListener("mousemove", (event) => {
   if (!dragState.active) return;
-  applyDrag(event.clientY);
+  applyDrag(event.clientY, event.clientX);
 });
 
 window.addEventListener("mouseup", () => {

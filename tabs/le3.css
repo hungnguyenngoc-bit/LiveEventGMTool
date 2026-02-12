@@ -88,10 +88,23 @@
   min-height: 100%;
 }
 
+.le3-track-surface::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgba(226, 232, 245, 0.9);
+  pointer-events: none;
+}
+
+.le3-track-surface::before {
+  left: 60%;
+  transform: translateX(-1px);
+}
+
 .le3-event {
   position: absolute;
-  left: 16px;
-  width: 300px;
   background: #d0e3ff;
   border: 1px solid #cdddf5;
   border-left: 6px solid #3e81d8;
@@ -158,6 +171,18 @@
 .le3-event.selected {
   border-color: #0b5ed7;
   box-shadow: 0 12px 24px rgba(11, 94, 215, 0.25);
+}
+
+.le3-event.is-hidden-track {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(120, 130, 150, 0.22) 0px,
+    rgba(120, 130, 150, 0.22) 8px,
+    rgba(255, 255, 255, 0.2) 8px,
+    rgba(255, 255, 255, 0.2) 16px
+  );
+  background-color: #eef1f7;
+  border-color: #cfd7e6;
 }
 
 .le3-event-title {
